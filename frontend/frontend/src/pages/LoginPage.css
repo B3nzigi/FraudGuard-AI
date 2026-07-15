@@ -1,0 +1,79 @@
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f3f4f6;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.login-form {
+    padding: 2rem;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column; 
+    width: 320px;
+}
+
+.login-form h2 {
+    margin: 0 0 1.5rem;
+    text-align: center;
+    color: #1f2937;
+    font-size: 1.5rem;
+}
+
+.login-input {
+    margin: 0.5rem 0;
+    padding: 0.75rem;
+    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    background-color: #ffffff;
+    color: #1f2937;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.login-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.login-button {
+    margin: 1.25rem 0 0;
+    padding: 0.75rem;
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.login-button:hover:not(:disabled){
+    background-color: #1d4ed8;
+}
+
+.login-button:active:not(:disabled){
+    transform: scale(0.98);
+}
+
+.login-button:disabled{
+    background-color: #93c5fd;
+    cursor: not-allowed;
+}
+
+.login-error {
+    color: #b91c1c;
+    background-color: #fee2e2;
+    border: 1px solid #fca5a5;
+    padding: 0.65rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    text-align: center;
+}
