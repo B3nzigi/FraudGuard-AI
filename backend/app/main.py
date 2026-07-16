@@ -4,6 +4,7 @@ from .schemas import CheckoutRequest, LoginRequest, Token
 from .database import get_db_connection
 from passlib.context import CryptContext
 from .schemas import RegisterRequest
+import requests
 
 app = FastAPI(title="FraudGuardAI Core API")
 
@@ -45,9 +46,13 @@ def login(payload: LoginRequest):
 
 @app.post("/api/v1/checkout", status_code=201)
 def checkout(transaction: CheckoutRequest):
+    # 1. Define safe default values right away to make VS Code happy!
+    fraud_score = 0.15
+    is_flagged = 0
+
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            # 1. Persist transaction data to database
+            # Persist transaction data to database
             cur.execute(
                 """INSERT INTO transactions (user_id, product_id, amount, ip_address, device_fingerprint) 
                    VALUES (%s, %s, %s, %s, %s) RETURNING transaction_id;""",
@@ -56,15 +61,48 @@ def checkout(transaction: CheckoutRequest):
             transaction_id = cur.fetchone()[0]
             conn.commit()
             
-    # TODO: Layer 3 Integration 
-    # Hook up requests module here to hand off transaction metrics to ML microservice /predict
-    mock_fraud_score = 0.12 
-    is_flagged = 0
+    # --- ML Microservice call ---
+    ml_service_url = "http://127.0.0.1:8001/predict"
+    
+    try:
+        response = requests.post(
+            ml_service_url,
+            json={
+                "amount": float(transaction.amount),
+                "ip_address": transaction.ip_address,
+                "device_fingerprint": transaction.device_fingerprint
+            },
+            timeout=2.0
+        )
+        
+        if response.status_code == 200:
+            ml_data = response.json()
+            fraud_score = ml_data.get("fraud_score", 0.0)
+            is_flagged = 1 if ml_data.get("is_flagged", False) else 0
+        else:
+            # Fall back to default if server error
+            fraud_score = 0.15
+            is_flagged = 0
+            
+    except requests.exceptions.RequestException:
+        print("WARNING: ML Microservice is offline! Using fallback scoring.")
+        # Fall back to default if offline
+        fraud_score = 0.15
+        is_flagged = 0
+
+    # optional: update DB with real fraud score we just received
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE transactions SET is_fraud = %s WHERE transaction_id = %s;",
+                (is_flagged, transaction_id)
+            )
+            conn.commit()
     
     return {
         "status": "processed",
         "transaction_id": transaction_id,
-        "fraud_score": mock_fraud_score,
+        "fraud_score": fraud_score,
         "action": "allow" if not is_flagged else "review"
     }
 
