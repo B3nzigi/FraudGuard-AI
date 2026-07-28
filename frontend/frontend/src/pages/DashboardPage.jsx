@@ -50,6 +50,9 @@ export default function DashboardPage({ onLogout }) {
       {/* Top Glassmorphism Header */}
       <header className="admin-header">
         <h1>FraudGuard AI Admin Dashboard</h1>
+        <div className="system-status">
+          <span className="status-dot"></span>ML Engine Active
+        </div>
       </header>
 
       <div className="admin-body">
