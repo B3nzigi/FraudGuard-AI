@@ -1,0 +1,253 @@
+/* Alerts Container & Layout */
+.alerts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+  }
+  
+  /* 1. Alerts KPI Grid */
+  .alerts-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  
+  .alert-kpi-card {
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  .alert-kpi-card.critical { border-left: 4px solid #ef4444; }
+  .alert-kpi-card.pending { border-left: 4px solid #f59e0b; }
+  .alert-kpi-card.resolved { border-left: 4px solid #10b981; }
+  .alert-kpi-card.response-time { border-left: 4px solid #3b82f6; }
+  
+  .kpi-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: #94a3b8;
+    letter-spacing: 1px;
+  }
+  
+  .kpi-count {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #f8fafc;
+  }
+  
+  .kpi-subtext {
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+  
+  /* 2. Controls & Filter Bar */
+  .alerts-controls {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    background: rgba(30, 41, 59, 0.4);
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+  
+  .alerts-search-input {
+    flex: 1;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 10px 16px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.9rem;
+  }
+  
+  .alerts-search-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+  }
+  
+  .alerts-filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #94a3b8;
+    font-size: 0.85rem;
+  }
+  
+  .alerts-filter-group select {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  
+  /* 3. Alerts Table */
+  .alerts-table-wrapper {
+    background: rgba(30, 41, 59, 0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  }
+  
+  .alerts-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.88rem;
+  }
+  
+  .alerts-table th {
+    background: rgba(15, 23, 42, 0.6);
+    padding: 14px 16px;
+    color: #94a3b8;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  
+  .alerts-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    color: #cbd5e1;
+  }
+  
+  .alerts-table tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  
+  .font-mono { font-family: monospace; color: #38bdf8; }
+  .text-muted { color: #64748b; }
+  .location-tag { margin-left: 8px; font-size: 0.75rem; color: #94a3b8; }
+  
+  /* Risk Pills */
+  .risk-pill {
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.8rem;
+  }
+  .risk-pill.critical { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+  .risk-pill.high { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+  .risk-pill.medium { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+  
+  /* Status Pills */
+  .status-pill {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .status-pill.new { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+  .status-pill.under-investigation { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+  .status-pill.resolved---fraud { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+  .status-pill.resolved---approved { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+  
+  /* Table Action Buttons */
+  .actions-cell {
+    display: flex;
+    gap: 6px;
+  }
+  
+  .btn-action {
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  
+  .btn-action.block { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+  .btn-action.approve { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+  .btn-action.inspect { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+  .btn-action:hover { opacity: 0.8; }
+  
+  /* 4. Inspection Modal */
+  .modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+  }
+  
+  .modal-card {
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    width: 600px;
+    max-width: 90vw;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+  
+  .modal-header {
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .modal-header h3 { margin: 0; color: #f8fafc; font-size: 1.1rem; }
+  .modal-close { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; }
+  
+  .modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+  
+  .modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  
+  .modal-grid label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
+  .modal-value { margin: 4px 0 0 0; font-size: 0.95rem; color: #f1f5f9; }
+  
+  .raw-json-box label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
+  .raw-json-box pre {
+    background: #0f172a;
+    padding: 12px;
+    border-radius: 8px;
+    color: #38bdf8;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    margin-top: 6px;
+  }
+  
+  .modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: rgba(15, 23, 42, 0.4);
+  }
+  
+  .btn-modal {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  
+  .btn-modal.danger { background: #ef4444; color: #fff; }
+  .btn-modal.success { background: #10b981; color: #fff; }
+  .no-data { text-align: center; color: #64748b; padding: 24px !important; }
