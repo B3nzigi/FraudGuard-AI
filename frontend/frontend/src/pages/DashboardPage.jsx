@@ -9,6 +9,7 @@ import {
 } from 'recharts';
 import './DashboardPage.css';
 import AlertsTab from './AlertsTab';
+import ForecastTab from './ForecastTab';
 
 const mockForecastData = [
   { time: '00:00', actual: 12, forecast: 14, upperBound: 20, lowerBound: 8 },
@@ -98,10 +99,7 @@ export default function DashboardPage({ onLogout }) {
             <AlertsTab />
           ) : activeTab === 'Forecast' ? (
             /* Render Forecast View Placeholder */
-            <section className="chart-section">
-              <h2>Predictive ML Forecast Module</h2>
-              <p className="chart-subtext">Advanced time-series forecasting coming soon.</p>
-            </section>
+            <ForecastTab />
           ) : (
             /* Default: Render Overview Tab */
             <>
