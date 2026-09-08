@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AreaChart as Chart,
   Area as AreaLine,
@@ -8,27 +8,8 @@ import {
   ResponsiveContainer as Container,
   CartesianGrid as Grid
 } from 'recharts';
+import { fetchForecastData } from '../services/apiService';
 import './ForecastTab.css';
-
-const forecast7Days = [
-  { day: 'Mon', actual: 120, forecast: 115, upperBound: 140, lowerBound: 90 },
-  { day: 'Tue', actual: 150, forecast: 145, upperBound: 175, lowerBound: 115 },
-  { day: 'Wed', actual: 180, forecast: 190, upperBound: 220, lowerBound: 160 },
-  { day: 'Thu', actual: 210, forecast: 205, upperBound: 240, lowerBound: 170 },
-  { day: 'Fri', actual: 310, forecast: 340, upperBound: 400, lowerBound: 280 },
-  { day: 'Sat', actual: null, forecast: 490, upperBound: 580, lowerBound: 410 },
-  { day: 'Sun', actual: null, forecast: 420, upperBound: 510, lowerBound: 330 },
-];
-
-const forecast24Hours = [
-  { day: '00:00', actual: 15, forecast: 14, upperBound: 22, lowerBound: 8 },
-  { day: '04:00', actual: 42, forecast: 40, upperBound: 55, lowerBound: 30 },
-  { day: '08:00', actual: 18, forecast: 22, upperBound: 32, lowerBound: 12 },
-  { day: '12:00', actual: 28, forecast: 30, upperBound: 42, lowerBound: 20 },
-  { day: '16:00', actual: 65, forecast: 70, upperBound: 90, lowerBound: 50 },
-  { day: '20:00', actual: null, forecast: 110, upperBound: 140, lowerBound: 85 },
-  { day: '23:59', actual: null, forecast: 45, upperBound: 60, lowerBound: 30 }
-];
 
 export default function ForecastTab() {
   const [timeframe, setTimeframe] = useState('7d');
@@ -36,15 +17,41 @@ export default function ForecastTab() {
   const [enforceMpesaPin, setEnforceMpesaPin] = useState(true);
   const [blockVpn, setBlockVpn] = useState(false);
 
-  const activeData = timeframe === '7d' ? forecast7Days : forecast24Hours;
+  // States for backend data and loading indicators
+  const [forecastData, setForecastData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const baseExposureKES = timeframe === '7d' ? 5450000 : 1250000;
-  const adjustedExposure = Math.round(
-    baseExposureKES * (1.5 - riskCutoff) * (enforceMpesaPin ? 0.75 : 1.0) * (blockVpn ? 0.85 : 1.0)
-  );
+  // Fetch live metrics from FastAPI whenever controls change
+  useEffect(() => {
+    setLoading(true);
+
+    fetchForecastData({
+      timeframe,
+      cutoff: riskCutoff,
+      enforceMpesa: enforceMpesaPin,
+      blockVpn,
+    })
+      .then((data) => {
+        setForecastData(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('API Error:', err);
+        setLoading(false);
+      });
+  }, [timeframe, riskCutoff, enforceMpesaPin, blockVpn]);
+
+  // Fallback metrics while loading or if offline
+  const activeChartData = forecastData?.chartData || [];
+  const exposureKES = forecastData?.adjustedExposureKES ?? 0;
+  const attackSurge = forecastData?.projectedSurge || '+0.0%';
+  const peakWindow = forecastData?.peakWindow || 'N/A';
+  const modelDrift = forecastData?.modelDrift || 'Stable';
+  const attackVectors = forecastData?.attackVectors || [];
 
   return (
     <div className="forecast-container">
+      {/* 1. Header & Timeframe selector */}
       <div className="forecast-header-bar">
         <div>
           <h2>Predictive ML Engine (Prophet Model)</h2>
@@ -66,37 +73,41 @@ export default function ForecastTab() {
         </div>
       </div>
 
+      {/* 2. Dynamic Summary KPIs */}
       <section className="forecast-kpi-grid">
         <div className="forecast-kpi-card danger">
           <span className="kpi-label">Projected Attack Surge</span>
-          <span className="kpi-val">+24.6%</span>
-          <span className="kpi-sub">Expected over weekend Peak</span>
+          <span className="kpi-val">{attackSurge}</span>
+          <span className="kpi-sub">Expected over peak window</span>
         </div>
         <div className="forecast-kpi-card warning">
           <span className="kpi-label">Risk at Stake (KES)</span>
-          <span className="kpi-val">KES {adjustedExposure.toLocaleString()}</span>
+          <span className="kpi-val">KES {exposureKES.toLocaleString()}</span>
           <span className="kpi-sub">Projected fraud exposure</span>
         </div>
         <div className="forecast-kpi-card info">
           <span className="kpi-label">Predicted Peak Window</span>
-          <span className="kpi-val">Sat 02:00 - 06:00 EAT</span>
+          <span className="kpi-val">{peakWindow}</span>
           <span className="kpi-sub">High velocity carding expected</span>
         </div>
         <div className="forecast-kpi-card success">
           <span className="kpi-label">Model Drift Index</span>
-          <span className="kpi-val">0.03 (Stable)</span>
+          <span className="kpi-val">{modelDrift}</span>
           <span className="kpi-sub">Retraining due in 12 days</span>
         </div>
       </section>
 
+      {/* 3. Recharts Prophet Area Chart */}
       <section className="forecast-chart-card">
         <div className="chart-card-header">
           <h3>Prophet Fraud Volume & Confidence Bands</h3>
-          <span className="chart-badge">KES Value Scale (x1000)</span>
+          <span className="chart-badge">
+            {loading ? 'Updating live metrics...' : 'KES Value Scale (x1000)'}
+          </span>
         </div>
         <div className="forecast-chart-wrapper">
           <Container width="100%" height={340}>
-            <Chart data={activeData} margin={{ top: 15, right: 30, left: 10, bottom: 0}}>
+            <Chart data={activeChartData} margin={{ top: 15, right: 30, left: 10, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#a855f7" stopOpacity={0.6}/>
@@ -108,9 +119,10 @@ export default function ForecastTab() {
               <Y stroke="#94a3b8" unit="k" />
               <Tip
                 contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', borderRadius: '8px', color: '#fff' }}
-                formatter={(value, name) => [`KES ${(value * 1000).toLocaleString()}`, name]}
+                formatter={(value, name) => [value !== null ? `KES ${(value * 1000).toLocaleString()}` : 'N/A', name]}
               />
 
+              {/* Upper & Lower Confidence Area */}
               <AreaLine
                 type="monotone"
                 dataKey="upperBound"
@@ -128,6 +140,7 @@ export default function ForecastTab() {
                 name="Lower Bound (KES)"
               />
               
+              {/* Forecast Line */}
               <AreaLine
                 type="monotone"
                 dataKey="forecast"
@@ -138,6 +151,7 @@ export default function ForecastTab() {
                 name="Predicted Fraud (KES)"
               />
 
+              {/* Actual Line */}
               <AreaLine 
                 type="monotone"
                 dataKey="actual"
@@ -151,6 +165,7 @@ export default function ForecastTab() {
         </div>
       </section>
 
+      {/* 4. Interactive Simulation & Vector Breakdown */}
       <div className="forecast-bottom-grid">
         <section className="simulation-card">
           <h3>"What If?" Mitigation Simulator</h3>
@@ -192,32 +207,21 @@ export default function ForecastTab() {
           </div>
         </section>
 
+        {/* Vector Distribution */}
         <section className="vectors-card">
           <h3>Predicted Attack Vectors</h3>
           <div className="vector-list">
-            <div className="vector-item">
-              <div className="vector-info">
-                <span>M-pesa SIM Swap / Account takeover</span>
-                <strong>54%</strong>
+            {attackVectors.map((vector, idx) => (
+              <div className="vector-item" key={idx}>
+                <div className="vector-info">
+                  <span>{vector.label}</span>
+                  <strong>{vector.percentage}%</strong>
+                </div>
+                <div className="vector-bar">
+                  <div className={`vector-fill ${vector.level}`} style={{ width: `${vector.percentage}%` }}></div>
+                </div>
               </div>
-              <div className="vector-bar"><div className="vector-fill danger" style={{width: '54%' }}></div></div>
-            </div>
-
-            <div className="vector-item">
-              <div className="vector-info">
-                <span>Carding & Bot Velocity Attacks</span>
-                <strong>28%</strong>
-              </div>
-              <div className="vector-bar"><div className="vector-fill warning" style={{ width: '28%' }}></div></div>
-            </div>
-
-            <div className="vector-item">
-              <div className="vector-info">
-                <span>Promo Code / Referral Exploits</span>
-                <strong>18%</strong>
-              </div>
-              <div className="vector-bar"><div className="vector-fill info" style={{ width: '18%' }}></div></div>
-            </div>
+            ))}
           </div>
         </section>
       </div>

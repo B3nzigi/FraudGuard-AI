@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from .schemas import CheckoutRequest, LoginRequest, Token
 from .database import get_db_connection
@@ -145,4 +145,56 @@ def register(payload: RegisterRequest):
             "id": new_user[0],
             "email": new_user[1]
         }
+    }
+
+@app.get("/api/v1/forecast")
+def get_ml_forecast(
+    timeframe: str = Query("7d", description="Timeframe: '24h' or '7d'"),
+    cutoff: float = Query(0.75, description="Risk threshold cuttoff between 0.50 and 0.95"),
+    enforce_mpesa: bool = Query(True),
+    block_vpn: bool = Query(False)
+):
+    #Base financial exposure in ksh
+    base_exposure = 5_450_000 if timeframe == "7d" else 1_250_000
+
+    #Dynamic mitigation calc based on simulator rules
+    mpesa_factor = 0.75 if enforce_mpesa else 1.0
+    vpn_factor = 0.85 if block_vpn else 1.0
+    adjusted_exposure = int(round(base_exposure * (1.5 - cutoff) * mpesa_factor * vpn_factor))
+
+    #generate chart dataset based on selected timeframe
+    if timeframe == "7d":
+        chart_data = [
+            {"day": "Mon", "actual": 120, "forecast": 115, "upperBound": 140, "lowerBound": 90},
+            {"day": "Tue", "actual": 150, "forecast": 145, "upperBound": 175, "lowerBound": 115},
+            {"day": "Wed", "actual": 180, "forecast": 190, "upperBound": 220, "lowerBound": 160},
+            {"day": "Thu", "actual": 210, "forecast": 205, "upperBound": 240, "lowerBound": 170},
+            {"day": "Fri", "actual": 310, "forecast": 340, "upperBound": 400, "lowerBound": 280},
+            {"day": "Sat", "actual": None, "forecast": 490, "upperBound": 580, "lowerBound": 410},
+            {"day": "Sun", "actual": None, "forecast": 420, "upperBound": 510, "lowerBound": 330},
+        ]
+    else:
+        chart_data = [
+            {"day": "00:00", "actual": 15, "forecast": 14, "upperBound": 22, "lowerBound": 8},
+            {"day": "04:00", "actual": 42, "forecast": 40, "upperBound": 55, "lowerBound": 30},
+            {"day": "08:00", "actual": 18, "forecast": 22, "upperBound": 32, "lowerBound": 12},
+            {"day": "12:00", "actual": 28, "forecast": 30, "upperBound": 42, "lowerBound": 20},
+            {"day": "16:00", "actual": 65, "forecast": 70, "upperBound": 90, "lowerBound": 50},
+            {"day": "20:00", "actual": None, "forecast": 110, "upperBound": 140, "lowerBound": 85},
+            {"day": "23:59", "actual": None, "forecast": 45, "upperBound": 60, "lowerBound": 30},
+        ]
+
+    return {
+        "timeframe": timeframe,
+        "riskCutoff": cutoff,
+        "projectedSurge": "+24.6%",
+        "adjustedExposureKES": adjusted_exposure,
+        "peakWindow": "Sat 02:00 - 06:00 EAT" if timeframe == "7d" else "16:00 - 20:00 EAT",
+        "modelDrift": "0.03 (Stable)",
+        "chartData": chart_data,
+        "attackVectors": [
+            {"label": "M-pesa SIM Swap / Account takeover", "percentage": 54, "level": "danger"},
+            {"label": "Carding & Bot Velocity Attacks", "percentage": 28, "level": "warning"},
+            {"label": "Promo Code / Referral Exploits", "percentage": 18, "level": "info"}
+        ]
     }
