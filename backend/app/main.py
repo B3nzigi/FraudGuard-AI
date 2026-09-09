@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException, status, Query
+from fastapi import FastAPI, Depends, HTTPException, status, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from .schemas import CheckoutRequest, LoginRequest, Token
 from .database import get_db_connection
 from passlib.context import CryptContext
 from .schemas import RegisterRequest
 from pydantic import BaseModel
+from typing import List
 import requests
 
 app = FastAPI(title="FraudGuardAI Core API")
@@ -283,3 +284,30 @@ def update_alert_status(alert_id: str, payload: StatusUpdatePayload):
             alert["status"] = payload.status
             return {"message": "Status updated successfully", "alert": alert}
         raise HTTPException(status_code=404, detail="Alert not found")
+
+#Manage active user connections
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.remove(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connection.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            await connection.send_json(message)
+
+manager = ConnectionManager()
+
+@app.websocket("/ws/alerts")
+async def websocket_alerts_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)

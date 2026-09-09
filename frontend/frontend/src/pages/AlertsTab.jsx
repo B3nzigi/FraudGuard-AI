@@ -29,6 +29,30 @@ export default function AlertsTab() {
 
   useEffect(() => {
     fetchAlerts();
+
+    //establish persistent websocket conn
+    const ws = new WebSocket(`ws://localhost:8080/ws/alerts`);
+
+    ws.onopen = () => {
+      console.log('Connected to Live Alert Websocket')
+    };
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+
+      if (message.type === 'NEW_ALERT') {
+        //prepend incoming alert
+        setAlerts((prevAlerts) => [message.data, ...prevAlerts]);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket Error: ', error)
+    };
+
+    return () => {
+      ws.close();
+    };
   }, []);
 
   // 2. Persist triage action to backend
