@@ -1,95 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './AlertsTab.css';
 
-// Mock high-fidelity fraud alerts dataset
-const initialAlerts = [
-  {
-    id: 'ALT-8801',
-    timestamp: '2026-07-30 11:42:15',
-    trigger: 'Velocity Spike (5 txs / 60s)',
-    userId: 'usr_9921',
-    amount: '$2,450.00',
-    ip: '185.220.101.5',
-    location: 'Frankfurt, DE',
-    severity: 'Critical',
-    score: 0.94,
-    status: 'New',
-    device: 'Chrome / Linux (TOR Exit Node)'
-  },
-  {
-    id: 'ALT-8802',
-    timestamp: '2026-07-30 11:15:02',
-    trigger: 'Carding Pattern Detection',
-    userId: 'usr_1042',
-    amount: '$1.00',
-    ip: '104.28.19.88',
-    location: 'Ashburn, US',
-    severity: 'High',
-    score: 0.88,
-    status: 'Under Investigation',
-    device: 'Safari / iOS 17.4'
-  },
-  {
-    id: 'ALT-8803',
-    timestamp: '2026-07-30 10:55:40',
-    trigger: 'Anonymous Proxy / VPN Usage',
-    userId: 'usr_5190',
-    amount: '$890.00',
-    ip: '172.56.21.9',
-    location: 'Dallas, US',
-    severity: 'Medium',
-    score: 0.65,
-    status: 'New',
-    device: 'Firefox / Windows 11'
-  },
-  {
-    id: 'ALT-8804',
-    timestamp: '2026-07-30 09:30:11',
-    trigger: 'Geographic Impossible Speed',
-    userId: 'usr_3311',
-    amount: '$4,120.00',
-    ip: '190.211.8.44',
-    location: 'Bogota, CO',
-    severity: 'Critical',
-    score: 0.96,
-    status: 'New',
-    device: 'Edge / Windows 10'
-  },
-  {
-    id: 'ALT-8805',
-    timestamp: '2026-07-30 08:12:00',
-    trigger: 'Unusual High Amount for User',
-    userId: 'usr_7701',
-    amount: '$7,800.00',
-    ip: '64.233.160.1',
-    location: 'Mountain View, US',
-    severity: 'Low',
-    score: 0.42,
-    status: 'Resolved - Approved',
-    device: 'Chrome / macOS 14'
-  }
-];
-
 export default function AlertsTab() {
-  const [alerts, setAlerts] = useState(initialAlerts);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [selectedAlert, setSelectedAlert] = useState(null);
 
-  // Dynamic Triage Action Handlers
+  // 1. Fetch live alerts from FastAPI on load
+  const fetchAlerts = () => {
+    setLoading(true);
+    fetch('http://localhost:8080/api/v1/alerts')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to fetch alerts');
+        return res.json();
+      })
+      .then((data) => {
+        setAlerts(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('API Error:', err);
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    fetchAlerts();
+  }, []);
+
+  // 2. Persist triage action to backend
   const handleUpdateStatus = (id, newStatus) => {
-    setAlerts(prev =>
-      prev.map(alert => alert.id === id ? { ...alert, status: newStatus } : alert)
-    );
-    if (selectedAlert && selectedAlert.id === id) {
-      setSelectedAlert(prev => ({ ...prev, status: newStatus }));
-    }
+    fetch(`http://localhost:8080/api/v1/alerts/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to update status');
+        return res.json();
+      })
+      .then(() => {
+        // Optimistic state update
+        setAlerts((prev) =>
+          prev.map((alert) => (alert.id === id ? { ...alert, status: newStatus } : alert))
+        );
+        if (selectedAlert && selectedAlert.id === id) {
+          setSelectedAlert((prev) => ({ ...prev, status: newStatus }));
+        }
+      })
+      .catch((err) => console.error('Status update failed:', err));
   };
 
   // Filter Logic
-  const filteredAlerts = alerts.filter(alert => {
-    const matchesSearch = 
+  const filteredAlerts = alerts.filter((alert) => {
+    const matchesSearch =
       alert.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       alert.userId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       alert.ip.includes(searchQuery) ||
@@ -101,14 +68,18 @@ export default function AlertsTab() {
     return matchesSearch && matchesSeverity && matchesStatus;
   });
 
-  // Calculate Metrics
-  const criticalCount = alerts.filter(a => a.severity === 'Critical' && a.status !== 'Resolved - Fraud' && a.status !== 'Resolved - Approved').length;
-  const pendingCount = alerts.filter(a => a.status === 'New' || a.status === 'Under Investigation').length;
-  const resolvedCount = alerts.filter(a => a.status.startsWith('Resolved')).length;
+  // Metric calculations
+  const criticalCount = alerts.filter(
+    (a) => a.severity === 'Critical' && !a.status.startsWith('Resolved')
+  ).length;
+  const pendingCount = alerts.filter(
+    (a) => a.status === 'New' || a.status === 'Under Investigation'
+  ).length;
+  const resolvedCount = alerts.filter((a) => a.status.startsWith('Resolved')).length;
 
   return (
     <div className="alerts-container">
-      {/* 1. Alerts KPI Metric Header */}
+      {/* 1. Alerts KPI Header */}
       <section className="alerts-kpi-grid">
         <div className="alert-kpi-card critical">
           <span className="kpi-title">Critical Threats</span>
@@ -132,9 +103,9 @@ export default function AlertsTab() {
         </div>
       </section>
 
-      {/* 2. Search & Filter Bar */}
+      {/* 2. Controls & Search */}
       <section className="alerts-controls">
-        <input 
+        <input
           type="text"
           placeholder="Search Alert ID, User, IP, or Trigger Rule..."
           value={searchQuery}
@@ -182,8 +153,12 @@ export default function AlertsTab() {
             </tr>
           </thead>
           <tbody>
-            {filteredAlerts.length > 0 ? (
-              filteredAlerts.map(alert => (
+            {loading ? (
+              <tr>
+                <td colSpan="9" className="no-data">Loading security alerts...</td>
+              </tr>
+            ) : filteredAlerts.length > 0 ? (
+              filteredAlerts.map((alert) => (
                 <tr key={alert.id} className={alert.severity.toLowerCase()}>
                   <td className="font-mono">{alert.id}</td>
                   <td className="text-muted">{alert.timestamp.split(' ')[1]}</td>
@@ -205,22 +180,22 @@ export default function AlertsTab() {
                     </span>
                   </td>
                   <td className="actions-cell">
-                    <button 
-                      className="btn-action block" 
+                    <button
+                      className="btn-action block"
                       title="Block User & Confirm Fraud"
                       onClick={() => handleUpdateStatus(alert.id, 'Resolved - Fraud')}
                     >
                       Block
                     </button>
-                    <button 
-                      className="btn-action approve" 
+                    <button
+                      className="btn-action approve"
                       title="Approve Transaction"
                       onClick={() => handleUpdateStatus(alert.id, 'Resolved - Approved')}
                     >
                       Approve
                     </button>
-                    <button 
-                      className="btn-action inspect" 
+                    <button
+                      className="btn-action inspect"
                       onClick={() => setSelectedAlert(alert)}
                     >
                       Inspect
@@ -237,7 +212,7 @@ export default function AlertsTab() {
         </table>
       </section>
 
-      {/* 4. Deep Inspection Modal */}
+      {/* 4. Inspection Modal */}
       {selectedAlert && (
         <div className="modal-backdrop" onClick={() => setSelectedAlert(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
@@ -281,14 +256,14 @@ export default function AlertsTab() {
             </div>
 
             <footer className="modal-footer">
-              <button 
-                className="btn-modal danger" 
+              <button
+                className="btn-modal danger"
                 onClick={() => handleUpdateStatus(selectedAlert.id, 'Resolved - Fraud')}
               >
                 Confirm Fraud & Blacklist IP
               </button>
-              <button 
-                className="btn-modal success" 
+              <button
+                className="btn-modal success"
                 onClick={() => handleUpdateStatus(selectedAlert.id, 'Resolved - Approved')}
               >
                 Mark as False Positive

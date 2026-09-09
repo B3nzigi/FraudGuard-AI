@@ -4,6 +4,7 @@ from .schemas import CheckoutRequest, LoginRequest, Token
 from .database import get_db_connection
 from passlib.context import CryptContext
 from .schemas import RegisterRequest
+from pydantic import BaseModel
 import requests
 
 app = FastAPI(title="FraudGuardAI Core API")
@@ -198,3 +199,87 @@ def get_ml_forecast(
             {"label": "Promo Code / Referral Exploits", "percentage": 18, "level": "info"}
         ]
     }
+
+#inmemory alerts dataset
+mock_alerts_db = [
+    {
+        "id": "ALT-8801",
+        "timestamp": "2026-07-30 11:42:15",
+        "trigger": "Velocity Spike (5 txs / 60s)",
+        "userId": "usr_9921",
+        "amount": "$2,450.00",
+        "ip": "185.220.101.5",
+        "location": "Frankfurt, DE",
+        "severity": "Critical",
+        "score": 0.94,
+        "status": "New",
+        "device": "Chrome / Linux (TOR Exit Node)"
+    },
+    {
+        "id": "ALT-8802",
+        "timestamp": "2026-07-30 11:15:02",
+        "trigger": "Carding Pattern Detection",
+        "userId": "usr_1042",
+        "amount": "$1.00",
+        "ip": "104.28.19.88",
+        "location": "Ashburn, US",
+        "severity": "High",
+        "score": 0.88,
+        "status": "Under Investigation",
+        "device": "Safari / iOS 17.4"
+    },
+    {
+        "id": "ALT-8803",
+        "timestamp": "2026-07-30 10:55:40",
+        "trigger": "Anonymous Proxy / VPN Usage",
+        "userId": "usr_5190",
+        "amount": "$890.00",
+        "ip": "172.56.21.9",
+        "location": "Dallas, US",
+        "severity": "Medium",
+        "score": 0.65,
+        "status": "New",
+        "device": "Firefox / Windows 11"
+    },
+    {
+        "id": "ALT-8804",
+        "timestamp": "2026-07-30 09:30:11",
+        "trigger": "Geographic Impossible Speed",
+        "userId": "usr_3311",
+        "amount": "$4,120.00",
+        "ip": "190.211.8.44",
+        "location": "Bogota, CO",
+        "severity": "Critical",
+        "score": 0.96,
+        "status": "New",
+        "device": "Edge / Windows 10"
+    },
+    {
+        "id": "ALT-8805",
+        "timestamp": "2026-07-30 08:12:00",
+        "trigger": "Unusual High Amount for User",
+        "userId": "usr_7701",
+        "amount": "$7,800.00",
+        "ip": "64.233.160.1",
+        "location": "Mountain View, US",
+        "severity": "Low",
+        "score": 0.42,
+        "status": "Resolved - Approved",
+        "device": "Chrome / macOS 14"
+    }
+]
+
+class StatusUpdatePayload(BaseModel):
+    status: str
+
+@app.get("/api/v1/alerts")
+def get_alerts():
+    return mock_alerts_db
+
+@app.patch("/api/v1/alerts/{alert_id}/status")
+def update_alert_status(alert_id: str, payload: StatusUpdatePayload):
+    for alert in mock_alerts_db:
+        if alert["id"] == alert_id:
+            alert["status"] = payload.status
+            return {"message": "Status updated successfully", "alert": alert}
+        raise HTTPException(status_code=404, detail="Alert not found")
