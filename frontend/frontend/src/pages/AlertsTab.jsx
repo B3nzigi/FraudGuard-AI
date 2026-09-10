@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { alertService } from '../services/api';
 import './AlertsTab.css';
 
 export default function AlertsTab() {
@@ -12,11 +13,8 @@ export default function AlertsTab() {
   // 1. Fetch live alerts from FastAPI on load
   const fetchAlerts = () => {
     setLoading(true);
-    fetch('http://localhost:8080/api/v1/alerts')
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch alerts');
-        return res.json();
-      })
+    alertService
+      .getAlerts()
       .then((data) => {
         setAlerts(data);
         setLoading(false);
@@ -30,8 +28,9 @@ export default function AlertsTab() {
   useEffect(() => {
     fetchAlerts();
 
-    //establish persistent websocket conn
-    const ws = new WebSocket(`ws://localhost:8080/ws/alerts`);
+    const token = localStorage.getItem('token');
+
+    const ws = new WebSocket(`ws://localhost:8080/ws/alerts?token=${token}`);
 
     ws.onopen = () => {
       console.log('Connected to Live Alert Websocket')
@@ -57,17 +56,9 @@ export default function AlertsTab() {
 
   // 2. Persist triage action to backend
   const handleUpdateStatus = (id, newStatus) => {
-    fetch(`http://localhost:8080/api/v1/alerts/${id}/status`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to update status');
-        return res.json();
-      })
+    alertService
+      .updateStatus(id, newStatus)
       .then(() => {
-        // Optimistic state update
         setAlerts((prev) =>
           prev.map((alert) => (alert.id === id ? { ...alert, status: newStatus } : alert))
         );

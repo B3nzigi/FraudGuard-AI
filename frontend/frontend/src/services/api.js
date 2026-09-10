@@ -5,6 +5,7 @@ const API_BASE_URL = 'http://localhost:8080/api/v1';
 // Create a base API instance
 const api = axios.create({
     baseURL: API_BASE_URL,
+    timeout: 15000,
     headers: {
         'Content-Type' : 'application/json',
     },
@@ -51,6 +52,36 @@ export const transactionService = {
         const response = await api.post('/checkout', payload);
         return response.data;
     }
+};
+
+export const forecastService = {
+    getForecast: async ({
+        timeframe = '7d',
+        cutoff = 0.75,
+        enforceMpesa = true,
+        blockVpn = false,
+    } = {}) => {
+        const response = await api.get('/forecast', {
+            params: {
+                timeframe,
+                cutoff,
+                enforce_mpesa: enforceMpesa,
+                block_vpn: blockVpn,
+            },
+        });
+        return response.data;
+    },
+};
+
+export const alertService = {
+    getAlerts: async () => {
+        const response = await api.get('/alerts');
+        return response.data;
+    },
+    updateStatus: async (alertId, status) => {
+        const response = await api.patch(`/alerts/${alertId}/status`, { status });
+        return response.data;
+    },
 };
 
 export default api;

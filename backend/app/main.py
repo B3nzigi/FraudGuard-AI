@@ -3,10 +3,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from .schemas import CheckoutRequest, LoginRequest, Token
 from .database import get_db_connection
 from passlib.context import CryptContext
+from datetime import datetime
+import bcrypt
+
+# passlib 1.7.4 looks for bcrypt.__about__, which bcrypt 4.x removed
+if not hasattr(bcrypt, "__about__"):
+    bcrypt.__about__ = type("about", (), {"__version__": bcrypt.__version__})
 from .schemas import RegisterRequest
 from pydantic import BaseModel
 from typing import List
+from .config import settings
+from .security import create_access_token, get_current_user
 import requests
+import jwt
 
 app = FastAPI(title="FraudGuardAI Core API")
 
@@ -37,18 +46,19 @@ def login(payload: LoginRequest):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             #looks at user email
-            cur.execute("SELECT user_id, password_hash FROM users WHERE email = %s;", (payload.email,))
+            cur.execute("SELECT user_id, password_hash, email FROM users WHERE email = %s;", (payload.email,))
             user = cur.fetchone()
 
     #check if user and password are correct
     if user and verify_password(payload.password, user[1]):
-        return {"access_token": f"mock_jwt_token_for_user_{user[0]}", "token_type": "bearer"}
+        token = create_access_token(data={"sub": str(user[0]), "email": user[2]})
+        return {"access_token": token, "token_type": "bearer"}
 
-    raise HTTPException(status_code=401, detail="Invalid Credentials")
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Credentials")
 
 @app.post("/api/v1/checkout", status_code=201)
-def checkout(transaction: CheckoutRequest):
-    # 1. Define safe default values right away to make VS Code happy!
+async def checkout(transaction: CheckoutRequest):
+    # Define safe default values right away
     fraud_score = 0.15
     is_flagged = 0
 
@@ -81,18 +91,14 @@ def checkout(transaction: CheckoutRequest):
             ml_data = response.json()
             fraud_score = ml_data.get("fraud_score", 0.0)
             is_flagged = 1 if ml_data.get("is_flagged", False) else 0
-        else:
-            # Fall back to default if server error
-            fraud_score = 0.15
-            is_flagged = 0
-            
+
     except requests.exceptions.RequestException:
         print("WARNING: ML Microservice is offline! Using fallback scoring.")
         # Fall back to default if offline
         fraud_score = 0.15
         is_flagged = 0
 
-    # optional: update DB with real fraud score we just received
+    #update DB with real fraud score we just received
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -100,6 +106,25 @@ def checkout(transaction: CheckoutRequest):
                 (is_flagged, transaction_id)
             )
             conn.commit()
+
+    if is_flagged == 1 or fraud_score >= 0.75:
+        new_alert_payload = {
+            "type": "NEW_ALERT",
+            "data": {
+                "id": f"ALT-{transaction_id}",
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "trigger": "Automated ML Anomaly Detection",
+                "userId": str(transaction.user_id),
+                "amount": f"${transaction.amount:,.2f}",
+                "ip": transaction.ip_address,
+                "location": "Live System Stream",
+                "severity": "Critical" if fraud_score >= 0.85 else "High",
+                "score": round(fraud_score, 2),
+                "status": "New",
+                "device": transaction.device_fingerprint
+            }
+        }
+        await manager.broadcast(new_alert_payload)
     
     return {
         "status": "processed",
@@ -154,7 +179,8 @@ def get_ml_forecast(
     timeframe: str = Query("7d", description="Timeframe: '24h' or '7d'"),
     cutoff: float = Query(0.75, description="Risk threshold cuttoff between 0.50 and 0.95"),
     enforce_mpesa: bool = Query(True),
-    block_vpn: bool = Query(False)
+    block_vpn: bool = Query(False),
+    current_user: dict = Depends(get_current_user)
 ):
     #Base financial exposure in ksh
     base_exposure = 5_450_000 if timeframe == "7d" else 1_250_000
@@ -274,16 +300,20 @@ class StatusUpdatePayload(BaseModel):
     status: str
 
 @app.get("/api/v1/alerts")
-def get_alerts():
+def get_alerts(current_user: dict = Depends(get_current_user)):
     return mock_alerts_db
 
 @app.patch("/api/v1/alerts/{alert_id}/status")
-def update_alert_status(alert_id: str, payload: StatusUpdatePayload):
+def update_alert_status(
+    alert_id: str,
+    payload: StatusUpdatePayload,
+    current_user: dict = Depends(get_current_user),
+):
     for alert in mock_alerts_db:
         if alert["id"] == alert_id:
             alert["status"] = payload.status
             return {"message": "Status updated successfully", "alert": alert}
-        raise HTTPException(status_code=404, detail="Alert not found")
+    raise HTTPException(status_code=404, detail="Alert not found")
 
 #Manage active user connections
 class ConnectionManager:
@@ -292,19 +322,33 @@ class ConnectionManager:
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
-        self.active_connections.remove(websocket)
+        self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connection.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
 
     async def broadcast(self, message: dict):
         for connection in self.active_connections:
-            await connection.send_json(message)
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                print(f"Error broadcasting message: {e}")
 
 manager = ConnectionManager()
 
 @app.websocket("/ws/alerts")
-async def websocket_alerts_endpoint(websocket: WebSocket):
+async def websocket_alerts_endpoint(websocket: WebSocket, token: str = Query(...)):
+    try: 
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id = payload.get("sub")
+        if not user_id:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+            return
+    except jwt.PyJWTError:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     await manager.connect(websocket)
     try:
         while True:

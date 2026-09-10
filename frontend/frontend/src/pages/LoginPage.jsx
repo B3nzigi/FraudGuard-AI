@@ -17,7 +17,13 @@ export default function LoginPage({ onLoginSuccess}) {
             await authService.login(email,password);
             onLoginSuccess(); // Navigate to the main page
         } catch (err) {
-            setError(err.response?.data?.detail || 'Invalid Email or Password');
+            if (err.code === 'ECONNABORTED') {
+                setError('Login timed out. Check that the API is running on port 8080.');
+            } else if (!err.response) {
+                setError('Cannot reach the API. Start the backend, then try again.');
+            } else {
+                setError(err.response?.data?.detail || 'Invalid Email or Password');
+            }
         } finally {
             setLoading(false);
         }
