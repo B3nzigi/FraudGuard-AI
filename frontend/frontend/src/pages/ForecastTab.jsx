@@ -9,6 +9,7 @@ import {
   CartesianGrid as Grid
 } from 'recharts';
 import { fetchForecastData } from '../services/apiService';
+import { exportForecastPdf } from '../utils/pdfExport';
 import './ForecastTab.css';
 
 export default function ForecastTab() {
@@ -49,7 +50,7 @@ export default function ForecastTab() {
   const modelDrift = forecastData?.modelDrift || 'Stable';
   const attackVectors = forecastData?.attackVectors || [];
 
-  return (
+   return (
     <div className="forecast-container">
       {/* 1. Header & Timeframe selector */}
       <div className="forecast-header-bar">
@@ -57,18 +58,41 @@ export default function ForecastTab() {
           <h2>Predictive ML Engine (Prophet Model)</h2>
           <p className="forecast-subtitle">Time-series anomaly forecasting & KES financial loss projections</p>
         </div>
-        <div className="timeframe-selector">
+        <div className="forecast-header-actions">
+          <div className="timeframe-selector">
+            <button
+              className={timeframe === '24h' ? 'active' : ''}
+              onClick={() => setTimeframe('24h')}
+            >
+              Next 24 Hours
+            </button>
+            <button
+              className={timeframe === '7d' ? 'active' : ''}
+              onClick={() => setTimeframe('7d')}
+            >
+              Next 7 Days
+            </button>
+          </div>
           <button
-            className={timeframe === '24h' ? 'active' : ''}
-            onClick={() => setTimeframe('24h')}
+            type="button"
+            className="btn-export-pdf"
+            onClick={() =>
+              exportForecastPdf({
+                timeframe,
+                riskCutoff,
+                enforceMpesaPin,
+                blockVpn,
+                attackSurge,
+                exposureKES,
+                peakWindow,
+                modelDrift,
+                chartData: activeChartData,
+                attackVectors,
+              })
+            }
+            title="Download forecast metrics as a PDF"
           >
-            Next 24 Hours
-          </button>
-          <button
-            className={timeframe === '7d' ? 'active' : ''}
-            onClick={() => setTimeframe('7d')}
-          >
-            Next 7 Days
+            Export PDF
           </button>
         </div>
       </div>

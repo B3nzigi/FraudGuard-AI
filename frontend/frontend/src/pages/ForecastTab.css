@@ -24,6 +24,28 @@
     color: #94a3b8;
   }
   
+  .forecast-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .btn-export-pdf {
+    background-color: #3b82f6;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .btn-export-pdf:hover {
+    background-color: #2563eb;
+  }
+
   .timeframe-selector {
     display: flex;
     background: rgba(15, 23, 42, 0.6);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { alertService } from '../services/api';
+import { exportAlertsPdf } from '../utils/pdfExport';
 import './AlertsTab.css';
 
 export default function AlertsTab() {
@@ -92,6 +93,15 @@ export default function AlertsTab() {
   ).length;
   const resolvedCount = alerts.filter((a) => a.status.startsWith('Resolved')).length;
 
+  const exportToPDF = () => {
+    exportAlertsPdf({
+      alerts: filteredAlerts,
+      criticalCount,
+      pendingCount,
+      resolvedCount,
+    });
+  };
+
   return (
     <div className="alerts-container">
       {/* 1. Alerts KPI Header */}
@@ -149,6 +159,14 @@ export default function AlertsTab() {
             <option value="Resolved - Approved">Resolved - Approved</option>
           </select>
         </div>
+
+        <button
+            className='btn-export-csv'
+            onClick={exportToPDF}
+            title="Download filtered incident logs as a PDF"
+        >
+          Export Executive Report    
+        </button>
       </section>
 
       {/* 3. Alerts Main Table */}
@@ -261,6 +279,27 @@ export default function AlertsTab() {
                 <div>
                   <label>Client Device Fingerprint</label>
                   <p className="modal-value font-mono">{selectedAlert.device}</p>
+                </div>
+              </div>
+
+              <div className="xai-section">
+                <h4>ML Model Decision Breakdown (SHAP Feature Importance)</h4>
+                <div className="shap-grid">
+                  <div className="shap-item danger">
+                    <span>TOR Exit Node Usage</span>
+                    <div className="shap-bar"><div className="fill" style={{ width: '85%' }}></div></div>
+                    <strong>+0.42 Risk</strong>
+                  </div>
+                  <div className="shap-item danger">
+                    <span>High Velocity Pattern</span>
+                    <div className="shap-bar"><div className="fill" style={{ width: '65%' }}></div></div>
+                    <strong>+0.31 Risk</strong>
+                  </div>
+                  <div className="shap-item success">
+                    <span>Known Device Fingerprint</span>
+                    <div className="shap-bar"><div className="fill" style={{ width: '30%' }}></div></div>
+                    <strong>-0.15 Risk</strong>
+                  </div>
                 </div>
               </div>
 

@@ -250,4 +250,50 @@
   
   .btn-modal.danger { background: #ef4444; color: #fff; }
   .btn-modal.success { background: #10b981; color: #fff; }
-  .no-data { text-align: center; color: #64748b; padding: 24px !important; }
+  .no-data { 
+    text-align: center; 
+    color: #64748b; 
+    padding: 24px !important; 
+  }
+
+  .btn-export-csv {
+    background-color: #3b82f6;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    white-space: nowrap;
+  }
+  
+  .btn-export-csv:hover {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+  }
+
+  .xai-section { 
+  margin-top: 15px; 
+  padding: 12px; 
+  background: rgba(15, 23, 42, 0.6); 
+  border-radius: 8px; 
+  }
+  .shap-item { 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    margin: 8px 0; 
+    font-size: 0.85rem; 
+  }
+  .shap-bar { 
+    flex: 1; 
+    height: 8px; 
+    background: #334155; 
+    margin: 0 12px; 
+    border-radius: 4px;
+    overflow: hidden; 
+  }
+  .shap-item.danger .fill { background: #ef4444; }
+  .shap-item.success .fill { background: #22c55e; }
