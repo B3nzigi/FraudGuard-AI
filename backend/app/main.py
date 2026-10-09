@@ -80,6 +80,7 @@ async def checkout(transaction: CheckoutRequest):
         response = requests.post(
             ml_service_url,
             json={
+                "user_id": str(transaction.user_id),
                 "amount": float(transaction.amount),
                 "ip_address": transaction.ip_address,
                 "device_fingerprint": transaction.device_fingerprint
@@ -89,8 +90,8 @@ async def checkout(transaction: CheckoutRequest):
         
         if response.status_code == 200:
             ml_data = response.json()
-            fraud_score = ml_data.get("fraud_score", 0.0)
-            is_flagged = 1 if ml_data.get("is_flagged", False) else 0
+            fraud_score = ml_data.get("risk_score", 0.15)
+            is_flagged = 1 if ml_data.get("is_fraud", False) else 0
 
     except requests.exceptions.RequestException:
         print("WARNING: ML Microservice is offline! Using fallback scoring.")
