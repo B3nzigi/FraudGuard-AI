@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, Query, WebSocket, W
 from fastapi.middleware.cors import CORSMiddleware
 from .schemas import CheckoutRequest, LoginRequest, Token
 from .database import get_db_connection
+from psycopg2.extras import RealDictCursor
 from passlib.context import CryptContext
 from datetime import datetime
 import bcrypt
@@ -36,20 +37,67 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Database Alert Helper Functions ---
+def fetch_all_alerts_db(limit=50):
+    with get_db_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT 
+                    a.alert_id, 
+                    a.transaction_id, 
+                    a.trigger, 
+                    a.severity, 
+                    a.score, 
+                    a.status, 
+                    a.created_at,
+                    t.user_id,
+                    t.amount,
+                    t.ip_address,
+                    t.device_fingerprint
+                FROM alerts a
+                LEFT JOIN transactions t ON a.transaction_id = t.transaction_id
+                ORDER BY a.created_at DESC 
+                LIMIT %s;
+            """, (limit,))
+            return cur.fetchall()
+
+def insert_alert_db(transaction_id, trigger, severity, score):
+    with get_db_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO alerts (transaction_id, trigger, severity, score, status)
+                VALUES (%s, %s, %s, %s, 'New')
+                RETURNING alert_id, transaction_id, trigger, severity, score, status, created_at;
+            """, (transaction_id, trigger, severity, score))
+            new_alert = cur.fetchone()
+            conn.commit()
+            return dict(new_alert)
+
+def update_alert_status_db(alert_id: str, new_status: str):
+    with get_db_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                UPDATE alerts 
+                SET status = %s 
+                WHERE alert_id = %s
+                RETURNING alert_id, status;
+            """, (new_status, alert_id))
+            updated = cur.fetchone()
+            conn.commit()
+            return dict(updated) if updated else None
+
+
 @app.get("/")
 def read_root():
     return {"message": "Welcome to the FraudGuardAI core API engine backend."}
 
 @app.post("/api/v1/auth/login", response_model=Token)
 def login(payload: LoginRequest):
-    # Authentication logic
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            #looks at user email
             cur.execute("SELECT user_id, password_hash, email FROM users WHERE email = %s;", (payload.email,))
             user = cur.fetchone()
 
-    #check if user and password are correct
     if user and verify_password(payload.password, user[1]):
         token = create_access_token(data={"sub": str(user[0]), "email": user[2]})
         return {"access_token": token, "token_type": "bearer"}
@@ -58,13 +106,11 @@ def login(payload: LoginRequest):
 
 @app.post("/api/v1/checkout", status_code=201)
 async def checkout(transaction: CheckoutRequest):
-    # Define safe default values right away
     fraud_score = 0.15
     is_flagged = 0
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            # Persist transaction data to database
             cur.execute(
                 """INSERT INTO transactions (user_id, product_id, amount, ip_address, device_fingerprint) 
                    VALUES (%s, %s, %s, %s, %s) RETURNING transaction_id;""",
@@ -74,7 +120,7 @@ async def checkout(transaction: CheckoutRequest):
             conn.commit()
             
     # --- ML Microservice call ---
-    ml_service_url = "http://127.0.0.1:8001/predict"
+    ml_service_url = "http://127.0.0.1:8000/predict"
     
     try:
         response = requests.post(
@@ -95,11 +141,9 @@ async def checkout(transaction: CheckoutRequest):
 
     except requests.exceptions.RequestException:
         print("WARNING: ML Microservice is offline! Using fallback scoring.")
-        # Fall back to default if offline
         fraud_score = 0.15
         is_flagged = 0
 
-    #update DB with real fraud score we just received
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -108,20 +152,31 @@ async def checkout(transaction: CheckoutRequest):
             )
             conn.commit()
 
+    # Persist and Broadcast Alert if Triggered
     if is_flagged == 1 or fraud_score >= 0.75:
+        trigger_reason = "Automated ML Anomaly Detection"
+        severity = "Critical" if fraud_score >= 0.85 else "High"
+        
+        saved_alert = insert_alert_db(
+            transaction_id=transaction_id,
+            trigger=trigger_reason,
+            severity=severity,
+            score=float(fraud_score)
+        )
+        
         new_alert_payload = {
             "type": "NEW_ALERT",
             "data": {
-                "id": f"ALT-{transaction_id}",
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "trigger": "Automated ML Anomaly Detection",
+                "id": str(saved_alert["alert_id"]),
+                "timestamp": saved_alert["created_at"].strftime("%Y-%m-%d %H:%M:%S"),
+                "trigger": saved_alert["trigger"],
                 "userId": str(transaction.user_id),
-                "amount": f"${transaction.amount:,.2f}",
+                "amount": f"KES {transaction.amount:,.2f}",
                 "ip": transaction.ip_address,
                 "location": "Live System Stream",
-                "severity": "Critical" if fraud_score >= 0.85 else "High",
-                "score": round(fraud_score, 2),
-                "status": "New",
+                "severity": saved_alert["severity"],
+                "score": round(saved_alert["score"], 2),
+                "status": saved_alert["status"],
                 "device": transaction.device_fingerprint
             }
         }
@@ -152,12 +207,10 @@ def register(payload: RegisterRequest):
 
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            #check is user exists
             cur.execute("SELECT user_id FROM users WHERE email = %s;", (payload.email,))
             if cur.fetchone():
                 raise HTTPException(status_code=400, detail="Email already registered")
 
-            #Create new user
             cur.execute(
                 """INSERT INTO users (first_name, last_name, email, password_hash)
                    VALUES (%s, %s, %s, %s) RETURNING user_id, email;""",
@@ -183,15 +236,11 @@ def get_ml_forecast(
     block_vpn: bool = Query(False),
     current_user: dict = Depends(get_current_user)
 ):
-    #Base financial exposure in ksh
     base_exposure = 5_450_000 if timeframe == "7d" else 1_250_000
-
-    #Dynamic mitigation calc based on simulator rules
     mpesa_factor = 0.75 if enforce_mpesa else 1.0
     vpn_factor = 0.85 if block_vpn else 1.0
     adjusted_exposure = int(round(base_exposure * (1.5 - cutoff) * mpesa_factor * vpn_factor))
 
-    #generate chart dataset based on selected timeframe
     if timeframe == "7d":
         chart_data = [
             {"day": "Mon", "actual": 120, "forecast": 115, "upperBound": 140, "lowerBound": 90},
@@ -228,81 +277,30 @@ def get_ml_forecast(
         ]
     }
 
-#inmemory alerts dataset
-mock_alerts_db = [
-    {
-        "id": "ALT-8801",
-        "timestamp": "2026-07-30 11:42:15",
-        "trigger": "Velocity Spike (5 txs / 60s)",
-        "userId": "usr_9921",
-        "amount": "$2,450.00",
-        "ip": "185.220.101.5",
-        "location": "Frankfurt, DE",
-        "severity": "Critical",
-        "score": 0.94,
-        "status": "New",
-        "device": "Chrome / Linux (TOR Exit Node)"
-    },
-    {
-        "id": "ALT-8802",
-        "timestamp": "2026-07-30 11:15:02",
-        "trigger": "Carding Pattern Detection",
-        "userId": "usr_1042",
-        "amount": "$1.00",
-        "ip": "104.28.19.88",
-        "location": "Ashburn, US",
-        "severity": "High",
-        "score": 0.88,
-        "status": "Under Investigation",
-        "device": "Safari / iOS 17.4"
-    },
-    {
-        "id": "ALT-8803",
-        "timestamp": "2026-07-30 10:55:40",
-        "trigger": "Anonymous Proxy / VPN Usage",
-        "userId": "usr_5190",
-        "amount": "$890.00",
-        "ip": "172.56.21.9",
-        "location": "Dallas, US",
-        "severity": "Medium",
-        "score": 0.65,
-        "status": "New",
-        "device": "Firefox / Windows 11"
-    },
-    {
-        "id": "ALT-8804",
-        "timestamp": "2026-07-30 09:30:11",
-        "trigger": "Geographic Impossible Speed",
-        "userId": "usr_3311",
-        "amount": "$4,120.00",
-        "ip": "190.211.8.44",
-        "location": "Bogota, CO",
-        "severity": "Critical",
-        "score": 0.96,
-        "status": "New",
-        "device": "Edge / Windows 10"
-    },
-    {
-        "id": "ALT-8805",
-        "timestamp": "2026-07-30 08:12:00",
-        "trigger": "Unusual High Amount for User",
-        "userId": "usr_7701",
-        "amount": "$7,800.00",
-        "ip": "64.233.160.1",
-        "location": "Mountain View, US",
-        "severity": "Low",
-        "score": 0.42,
-        "status": "Resolved - Approved",
-        "device": "Chrome / macOS 14"
-    }
-]
-
 class StatusUpdatePayload(BaseModel):
     status: str
 
 @app.get("/api/v1/alerts")
 def get_alerts(current_user: dict = Depends(get_current_user)):
-    return mock_alerts_db
+    """Fetch recent alerts directly from PostgreSQL alerts table."""
+    rows = fetch_all_alerts_db()
+    return [
+        {
+            "id": str(row["alert_id"]),
+            "timestamp": row["created_at"].strftime("%Y-%m-%d %H:%M:%S") if row["created_at"] else "",
+            "trigger": row["trigger"],
+            "severity": row["severity"],
+            "score": row["score"],
+            "status": row["status"],
+            "transaction_id": str(row["transaction_id"]) if row["transaction_id"] else None,
+            "userId": str(row["user_id"]) if row["user_id"] else "Unknown",
+            "amount": f"KES {float(row['amount']):,.2f}" if row["amount"] is not None else "KES 0.00",
+            "ip": str(row["ip_address"]) if row["ip_address"] else "Unknown",
+            "location": "Live System Stream",
+            "device": row["device_fingerprint"] if row["device_fingerprint"] else "Unknown"
+        }
+        for row in rows
+    ]
 
 @app.patch("/api/v1/alerts/{alert_id}/status")
 def update_alert_status(
@@ -310,13 +308,14 @@ def update_alert_status(
     payload: StatusUpdatePayload,
     current_user: dict = Depends(get_current_user),
 ):
-    for alert in mock_alerts_db:
-        if alert["id"] == alert_id:
-            alert["status"] = payload.status
-            return {"message": "Status updated successfully", "alert": alert}
-    raise HTTPException(status_code=404, detail="Alert not found")
+    """Update alert review status directly in PostgreSQL."""
+    updated = update_alert_status_db(alert_id, payload.status)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Alert not found")
+        
+    return {"message": "Status updated successfully", "alert": updated}
 
-#Manage active user connections
+# Manage active user WebSocket connections
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -356,3 +355,15 @@ async def websocket_alerts_endpoint(websocket: WebSocket, token: str = Query(...
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+@app.get("/health")
+def health(): return {"status": "ok"}
+
+@app.get("/ready")
+def ready():
+    try:
+        with get_db_connection() as conn:
+            conn.cursor().execute("SELECT 1")
+        return {"ready": True}
+    except:
+        raise HTTPException(503, "DB unavailable")

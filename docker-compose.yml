@@ -15,5 +15,29 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
 
+  backend:
+    build: ./backend
+    ports: ["8080:8080"]
+    depends_on: [db]
+    environment:
+      DB_HOST: db
+      DB_NAME: fraud_db
+      SECRET_KEY: ${SECRET_KEY}
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8080
+
+  ml_service:
+    build: ./ml_service
+    ports: ["8001:8001"]
+    depends_on: [db]
+    environment:
+      DB_HOST: db
+      DB_NAME: fraud_db
+    command: uvicorn app:app --host 0.0.0.0 --port 8001
+
+  frontend:
+    build: ./frontend/frontend
+    ports: ["5173:5173"]
+    depends_on: [backend]
+
 volumes:
   postgres_data:
