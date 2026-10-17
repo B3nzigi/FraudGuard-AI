@@ -3,18 +3,18 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  color: #f8fafc;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 }
 
 /* 2. Glassmorphism Top Navigation Header */
 .admin-header {
-  background: rgba(30, 41, 59, 0.7);
+  background: rgba(17, 25, 29, 0.8);
   backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-color);
   padding: 20px 32px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--shadow-md);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -25,9 +25,7 @@
   font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.5px;
-  background: linear-gradient(90deg, #60a5fa, #3b82f6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--primary);
 }
 
 /* Header Live Status Indicator Badge */
@@ -36,19 +34,19 @@
   align-items: center;
   gap: 8px;
   font-size: 0.85rem;
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
+  color: var(--primary);
+  background: rgba(67, 217, 189, 0.1);
   padding: 6px 14px;
   border-radius: 20px;
-  border: 1px solid rgba(74, 222, 128, 0.2);
+  border: 1px solid rgba(67, 217, 189, 0.2);
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
-  background-color: #4ade80;
+  background-color: var(--primary);
   border-radius: 50%;
-  box-shadow: 0 0 8px #4ade80;
+  box-shadow: 0 0 8px var(--primary);
 }
 
 /* 3. Main Body Structure */
@@ -62,15 +60,15 @@
 /* 4. Sidebar Navigation & Logout Section */
 .admin-sidebar {
   width: 240px;
-  background: rgba(30, 41, 59, 0.6);
+  background: rgba(17, 25, 29, 0.7);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 24px 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
 }
 
 .sidebar-top h3 {
@@ -78,7 +76,7 @@
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .admin-sidebar nav {
@@ -91,45 +89,45 @@
   width: 100%;
   text-align: left;
   background: transparent;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   border: none;
   padding: 12px 16px;
   font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
-  border-radius: 10px;
-  transition: all 0.25s ease;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
 }
 
 .admin-sidebar button:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #ffffff;
+  background: var(--bg-surface-hover);
+  color: var(--text-primary);
 }
 
 .admin-sidebar button.active {
-  background: #2563eb;
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--bg-primary);
   font-weight: 600;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+  box-shadow: var(--shadow-glow-accent);
 }
 
 /* Sidebar Logout Button Pinned to Bottom */
 .sidebar-bottom {
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-color);
 }
 
 .logout-btn {
-  background: rgba(239, 68, 68, 0.15) !important;
-  color: #f87171 !important;
-  border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  background: var(--error-bg) !important;
+  color: var(--error) !important;
+  border: 1px solid rgba(248, 113, 113, 0.3) !important;
   font-weight: 600 !important;
   text-align: center !important;
 }
 
 .logout-btn:hover {
-  background: rgba(239, 68, 68, 0.3) !important;
-  color: #ffffff !important;
+  background: rgba(248, 113, 113, 0.25) !important;
+  color: #fff !important;
 }
 
 /* 5. Main Content Area */
@@ -142,12 +140,12 @@
 
 /* 6. KPI Metrics Banner Card */
 .kpi-card-section {
-  background: rgba(30, 41, 59, 0.6);
+  background: var(--bg-surface);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 24px 32px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -158,7 +156,7 @@
   font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 1.2px;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .kpi-metrics {
@@ -172,39 +170,39 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--bg-primary);
   padding: 12px 24px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
 }
 
 .metric-label {
   font-size: 0.95rem;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .metric-value {
   font-weight: 700;
-  color: #38bdf8;
+  color: var(--primary);
 }
 
 .metric-box.flagged .metric-value {
-  color: #f87171;
+  color: var(--error);
 }
 
 .metric-divider {
   font-size: 1.8rem;
-  color: #334155;
+  color: var(--border-color);
 }
 
 /* 7. Recharts Canvas Section */
 .chart-section {
-  background: rgba(30, 41, 59, 0.6);
+  background: var(--bg-surface);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 28px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
   flex: 1;
 }
 
@@ -212,13 +210,13 @@
   margin: 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .chart-subtext {
   margin: 4px 0 24px 0;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .chart-wrapper {
@@ -228,18 +226,18 @@
 
 /* 8. Recent Threat Intelligence Activity Table */
 .activity-section {
-  background: rgba(30, 41, 59, 0.6);
+  background: var(--bg-surface);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
   padding: 24px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-lg);
 }
 
 .activity-section h2 {
   margin: 0 0 16px 0;
   font-size: 1.1rem;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .activity-table {
@@ -251,22 +249,22 @@
 
 .activity-table th {
   padding: 12px 10px;
-  color: #94a3b8;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
   font-weight: 500;
 }
 
 .activity-table td {
   padding: 12px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  color: #e2e8f0;
+  border-bottom: 1px solid rgba(48, 54, 61, 0.5);
+  color: var(--text-secondary);
 }
 
 .activity-table code {
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--bg-primary);
   padding: 2px 6px;
   border-radius: 4px;
-  color: #38bdf8;
+  color: var(--primary);
   font-family: monospace;
 }
 
@@ -277,17 +275,17 @@
   font-weight: 600;
 }
 
-.risk-badge.high { 
-  background: rgba(239, 68, 68, 0.2); 
-  color: #f87171; 
+.risk-badge.high {
+  background: var(--error-bg);
+  color: var(--error);
 }
 
-.risk-badge.low { 
-  background: rgba(59, 130, 246, 0.2); 
-  color: #60a5fa; 
+.risk-badge.low {
+  background: var(--info-bg);
+  color: var(--info);
 }
 
 /* Action Status Tags */
-.status-tag.blocked { color: #f87171; font-weight: 600; }
-.status-tag.allowed { color: #4ade80; font-weight: 600; }
-.status-tag.review { color: #fbbf24; font-weight: 600; }
+.status-tag.blocked { color: var(--error); font-weight: 600; }
+.status-tag.allowed { color: var(--success); font-weight: 600; }
+.status-tag.review { color: var(--warning); font-weight: 600; }

@@ -23,24 +23,26 @@ export default function ForecastTab() {
   const [loading, setLoading] = useState(true);
 
   // Fetch live metrics from FastAPI whenever controls change
-  useEffect(() => {
-    setLoading(true);
+    useEffect(() => {
+      setLoading(true);
 
-    fetchForecastData({
-      timeframe,
-      cutoff: riskCutoff,
-      enforceMpesa: enforceMpesaPin,
-      blockVpn,
-    })
-      .then((data) => {
-        setForecastData(data);
-        setLoading(false);
+      fetchForecastData({
+        timeframe,
+        cutoff: riskCutoff,
+        enforceMpesa: enforceMpesaPin,
+        blockVpn,
       })
-      .catch((err) => {
-        console.error('API Error:', err);
-        setLoading(false);
-      });
-  }, [timeframe, riskCutoff, enforceMpesaPin, blockVpn]);
+        .then((data) => {
+          console.log('Forecast data fetched:', data);
+          setForecastData(data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error('API Error fetching forecast:', err);
+          setForecastData(null);
+          setLoading(false);
+        });
+    }, [timeframe, riskCutoff, enforceMpesaPin, blockVpn]);
 
   // Fallback metrics while loading or if offline
   const activeChartData = forecastData?.chartData || [];
@@ -134,15 +136,15 @@ export default function ForecastTab() {
             <Chart data={activeChartData} margin={{ top: 15, right: 30, left: 10, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.6}/>
-                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0.0}/>
+                  <stop offset="5%" stopColor="#a94df2" stopOpacity={0.6}/>
+                  <stop offset="95%" stopColor="#a94df2" stopOpacity={0.0}/>
                 </linearGradient>
               </defs>
-              <Grid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-              <X dataKey="day" stroke="#94a3b8" />
-              <Y stroke="#94a3b8" unit="k" />
+              <Grid strokeDasharray="3 3" stroke="#29383b" opacity={0.8} />
+              <X dataKey="day" stroke="#8a9a9c" />
+              <Y stroke="#8a9a9c" unit="k" />
               <Tip
-                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', borderRadius: '8px', color: '#fff' }}
+                contentStyle={{ backgroundColor: '#11191d', borderColor: '#29383b', borderRadius: '8px', color: '#f3f5f5' }}
                 formatter={(value, name) => [value !== null ? `KES ${(value * 1000).toLocaleString()}` : 'N/A', name]}
               />
 
@@ -151,7 +153,7 @@ export default function ForecastTab() {
                 type="monotone"
                 dataKey="upperBound"
                 stroke="none"
-                fill="#38bdf8"
+                fill="#43d9bd"
                 fillOpacity={0.12}
                 name="Upper Bound (KES)"
               />
@@ -159,7 +161,7 @@ export default function ForecastTab() {
                 type="monotone"
                 dataKey="lowerBound"
                 stroke="none"
-                fill="#0f172a"
+                fill="#0b1014"
                 fillOpacity={0.8}
                 name="Lower Bound (KES)"
               />
@@ -168,7 +170,7 @@ export default function ForecastTab() {
               <AreaLine
                 type="monotone"
                 dataKey="forecast"
-                stroke="#a855f7"
+                stroke="#a94df2"
                 strokeDasharray="4 4"
                 fill="url(#colorForecast)"
                 strokeWidth={2}
@@ -179,7 +181,7 @@ export default function ForecastTab() {
               <AreaLine 
                 type="monotone"
                 dataKey="actual"
-                stroke="#3b82f6"
+                stroke="#43d9bd"
                 fill="none"
                 strokeWidth={3}
                 name="Actual Fraud (KES)"

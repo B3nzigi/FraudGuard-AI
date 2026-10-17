@@ -12,48 +12,60 @@ export default function AlertsTab() {
   const [selectedAlert, setSelectedAlert] = useState(null);
 
   // 1. Fetch live alerts from FastAPI on load
-  const fetchAlerts = () => {
-    setLoading(true);
-    alertService
-      .getAlerts()
-      .then((data) => {
-        setAlerts(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('API Error:', err);
-        setLoading(false);
-      });
-  };
+    const fetchAlerts = () => {
+      setLoading(true);
+      alertService
+        .getAlerts()
+        .then((data) => {
+          console.log('Alerts fetched:', data);
+          setAlerts(data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error('API Error fetching alerts:', err);
+          setAlerts([]);
+          setLoading(false);
+        });
+    };
 
   useEffect(() => {
-    fetchAlerts();
+      fetchAlerts();
 
-    const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token');
+      console.log('WebSocket connecting with token:', token ? 'present' : 'missing');
+    
+      let ws;
+      try {
+        ws = new WebSocket(`ws://localhost:8080/ws/alerts?token=${token || ''}`);
 
-    const ws = new WebSocket(`ws://localhost:8080/ws/alerts?token=${token}`);
+        ws.onopen = () => {
+          console.log('Connected to Live Alert Websocket');
+        };
 
-    ws.onopen = () => {
-      console.log('Connected to Live Alert Websocket')
-    };
+        ws.onmessage = (event) => {
+          const message = JSON.parse(event.data);
 
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
+          if (message.type === 'NEW_ALERT') {
+            //prepend incoming alert
+            setAlerts((prevAlerts) => [message.data, ...prevAlerts]);
+          }
+        };
 
-      if (message.type === 'NEW_ALERT') {
-        //prepend incoming alert
-        setAlerts((prevAlerts) => [message.data, ...prevAlerts]);
+        ws.onerror = (error) => {
+          console.error('WebSocket Error: ', error);
+        };
+
+        ws.onclose = () => {
+          console.log('WebSocket connection closed');
+        };
+      } catch (err) {
+        console.error('Failed to create WebSocket:', err);
       }
-    };
 
-    ws.onerror = (error) => {
-      console.error('WebSocket Error: ', error)
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, []);
+      return () => {
+        if (ws) ws.close();
+      };
+    }, []);
 
   // 2. Persist triage action to backend
   const handleUpdateStatus = (id, newStatus) => {

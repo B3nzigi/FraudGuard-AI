@@ -24,11 +24,11 @@ function App() {
       ) : currentPage === 'login' ? (
         <div>
           <LoginPage onLoginSuccess={handleSuccess} />
-          <p style={{ textAlign: 'center', marginTop: '-3rem', background: '#f3f4f6', paddingBottom: '1rem' }}>
+          <p style={{ textAlign: 'center', marginTop: '-3rem', background: 'var(--bg-primary)', color: 'var(--text-secondary)', paddingBottom: '1rem' }}>
             Don't have an account?{' '}
             <span
               onClick={() => setCurrentPage('signup')}
-              style={{ color: '#2563eb', cursor: 'pointer', textDecoration: 'underline' }}
+              style={{ color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline' }}
             >
               Sign up here
             </span>

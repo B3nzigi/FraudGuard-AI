@@ -131,15 +131,15 @@ export default function DashboardPage({ onLogout }) {
                     <Chart data={mockForecastData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0}/>
+                          <stop offset="5%" stopColor="#43d9bd" stopOpacity={0.45}/>
+                          <stop offset="95%" stopColor="#43d9bd" stopOpacity={0.0}/>
                         </linearGradient>
                       </defs>
-                      <Grid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-                      <X dataKey="time" stroke="#94a3b8" />
-                      <Y stroke="#94a3b8" />
+                      <Grid strokeDasharray="3 3" stroke="#29383b" opacity={0.8} />
+                      <X dataKey="time" stroke="#8a9a9c" />
+                      <Y stroke="#8a9a9c" />
                       <Tip 
-                        contentStyle={{ backgroundColor: '#1e293b', borderColor: '#475569', borderRadius: '8px', color: '#fff' }}
+                        contentStyle={{ backgroundColor: '#11191d', borderColor: '#29383b', borderRadius: '8px', color: '#f3f5f5' }}
                       />
                       
                       {/* Confidence Interval Band */}
@@ -147,7 +147,7 @@ export default function DashboardPage({ onLogout }) {
                         type="monotone" 
                         dataKey="upperBound" 
                         stroke="none" 
-                        fill="#38bdf8" 
+                        fill="#43d9bd" 
                         fillOpacity={0.12} 
                         name="Upper Confidence Band" 
                       />
@@ -155,7 +155,7 @@ export default function DashboardPage({ onLogout }) {
                         type="monotone" 
                         dataKey="lowerBound" 
                         stroke="none" 
-                        fill="#0f172a" 
+                        fill="#0b1014" 
                         fillOpacity={0.8} 
                         name="Lower Confidence Band" 
                       />
@@ -164,7 +164,7 @@ export default function DashboardPage({ onLogout }) {
                       <AreaLine 
                         type="monotone" 
                         dataKey="forecast" 
-                        stroke="#a855f7" 
+                        stroke="#a94df2" 
                         strokeDasharray="4 4" 
                         fill="none" 
                         strokeWidth={2} 
@@ -173,7 +173,7 @@ export default function DashboardPage({ onLogout }) {
                       <AreaLine 
                         type="monotone" 
                         dataKey="actual" 
-                        stroke="#3b82f6" 
+                        stroke="#43d9bd" 
                         fill="url(#colorActual)" 
                         strokeWidth={3} 
                         name="Actual Fraud Attacks" 
