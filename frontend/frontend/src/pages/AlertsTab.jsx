@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { alertService } from '../services/api';
-import { exportAlertsPdf } from '../utils/pdfExport';
+import { exportAlertPdf, exportAlertsPdf } from '../utils/pdfExport';
 import './AlertsTab.css';
 
 export default function AlertsTab() {
@@ -87,6 +87,7 @@ export default function AlertsTab() {
     const matchesSearch =
       alert.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       alert.userId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (alert.userName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       alert.ip.includes(searchQuery) ||
       alert.trigger.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -189,7 +190,7 @@ export default function AlertsTab() {
               <th>Alert ID</th>
               <th>Timestamp</th>
               <th>Rule Trigger</th>
-              <th>User ID</th>
+              <th>Customer / User</th>
               <th>Amount</th>
               <th>IP & Location</th>
               <th>Risk Score</th>
@@ -208,14 +209,17 @@ export default function AlertsTab() {
                   <td className="font-mono">{alert.id}</td>
                   <td className="text-muted">{alert.timestamp.split(' ')[1]}</td>
                   <td><strong>{alert.trigger}</strong></td>
-                  <td className="font-mono">{alert.userId}</td>
+                  <td className="customer-cell">
+                    <strong>{alert.userName || 'Unknown account'}</strong>
+                    <small className="font-mono">{alert.userId}</small>
+                  </td>
                   <td>{alert.amount}</td>
                   <td>
                     <code>{alert.ip}</code>
                     <span className="location-tag">{alert.location}</span>
                   </td>
                   <td>
-                    <span className={`risk-pill ${alert.score >= 0.8 ? 'critical' : alert.score >= 0.6 ? 'high' : 'medium'}`}>
+                    <span className={`risk-pill ${alert.severity.toLowerCase()}`}>
                       {alert.score}
                     </span>
                   </td>
@@ -245,6 +249,13 @@ export default function AlertsTab() {
                     >
                       Inspect
                     </button>
+                    <button
+                      className="btn-action report"
+                      title="Export this alert as an individual PDF report"
+                      onClick={() => exportAlertPdf(alert)}
+                    >
+                      PDF
+                    </button>
                   </td>
                 </tr>
               ))
@@ -262,66 +273,73 @@ export default function AlertsTab() {
         <div className="modal-backdrop" onClick={() => setSelectedAlert(null)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <header className="modal-header">
-              <h3>Incident Deep Dive: {selectedAlert.id}</h3>
-              <button className="modal-close" onClick={() => setSelectedAlert(null)}>&times;</button>
+              <div>
+                <h3>Incident Inspection</h3>
+                <span className="inspection-id">Alert {selectedAlert.id}</span>
+              </div>
+              <button className="modal-close" aria-label="Close inspection" onClick={() => setSelectedAlert(null)}>&times;</button>
             </header>
 
             <div className="modal-body">
+              <section className="incident-reason" aria-labelledby="reason-heading">
+                <div className="incident-score">
+                  <span>Model risk score</span>
+                  <strong>{(Number(selectedAlert.score) * 100).toFixed(1)}%</strong>
+                  <span className={`risk-pill ${selectedAlert.severity.toLowerCase()}`}>{selectedAlert.severity}</span>
+                </div>
+                <div className="reason-copy">
+                  <label id="reason-heading">Reason for flagging</label>
+                  <p>{selectedAlert.reason || `The model assigned ${Number(selectedAlert.score).toFixed(2)} risk and sent this transaction for review.`}</p>
+                  <small>Rule: {selectedAlert.trigger}</small>
+                </div>
+              </section>
+
               <div className="modal-grid">
                 <div>
-                  <label>Triggering Rule</label>
-                  <p className="modal-value">{selectedAlert.trigger}</p>
+                  <label>Account holder</label>
+                  <p className="modal-value">{selectedAlert.userName || 'Unknown account'}</p>
+                  <small className="font-mono modal-detail">User ID: {selectedAlert.userId}</small>
                 </div>
                 <div>
-                  <label>Risk Score</label>
-                  <p className="modal-value text-danger">{selectedAlert.score} (Severity: {selectedAlert.severity})</p>
-                </div>
-                <div>
-                  <label>User ID</label>
-                  <p className="modal-value font-mono">{selectedAlert.userId}</p>
-                </div>
-                <div>
-                  <label>Transaction Amount</label>
+                  <label>Transaction amount</label>
                   <p className="modal-value">{selectedAlert.amount}</p>
                 </div>
                 <div>
-                  <label>IP Address & Geo</label>
+                  <label>Transaction time</label>
+                  <p className="modal-value">{selectedAlert.transactionTimestamp || selectedAlert.timestamp}</p>
+                </div>
+                <div>
+                  <label>IP address & location</label>
                   <p className="modal-value font-mono">{selectedAlert.ip} ({selectedAlert.location})</p>
                 </div>
                 <div>
-                  <label>Client Device Fingerprint</label>
-                  <p className="modal-value font-mono">{selectedAlert.device}</p>
+                  <label>Client device fingerprint</label>
+                  <p className="modal-value font-mono device-fingerprint">{selectedAlert.device}</p>
                 </div>
               </div>
 
               <div className="xai-section">
-                <h4>ML Model Decision Breakdown (SHAP Feature Importance)</h4>
-                <div className="shap-grid">
-                  <div className="shap-item danger">
-                    <span>TOR Exit Node Usage</span>
-                    <div className="shap-bar"><div className="fill" style={{ width: '85%' }}></div></div>
-                    <strong>+0.42 Risk</strong>
-                  </div>
-                  <div className="shap-item danger">
-                    <span>High Velocity Pattern</span>
-                    <div className="shap-bar"><div className="fill" style={{ width: '65%' }}></div></div>
-                    <strong>+0.31 Risk</strong>
-                  </div>
-                  <div className="shap-item success">
-                    <span>Known Device Fingerprint</span>
-                    <div className="shap-bar"><div className="fill" style={{ width: '30%' }}></div></div>
-                    <strong>-0.15 Risk</strong>
-                  </div>
+                <h4>Model inputs at detection</h4>
+                <div className="model-feature-grid">
+                  {(selectedAlert.modelFeatures || []).map((feature) => (
+                    <div className="model-feature" key={feature.label}>
+                      <span>{feature.label}</span>
+                      <strong>{feature.value}</strong>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="raw-json-box">
-                <label>Raw Payload Telemetry</label>
+              <details className="raw-json-box">
+                <summary>Raw transaction data</summary>
                 <pre>{JSON.stringify(selectedAlert, null, 2)}</pre>
-              </div>
+              </details>
             </div>
 
             <footer className="modal-footer">
+              <button className="btn-modal export" onClick={() => exportAlertPdf(selectedAlert)}>
+                Export alert PDF
+              </button>
               <button
                 className="btn-modal danger"
                 onClick={() => handleUpdateStatus(selectedAlert.id, 'Resolved - Fraud')}

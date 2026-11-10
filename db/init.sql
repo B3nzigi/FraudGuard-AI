@@ -1,7 +1,10 @@
 
 CREATE TABLE IF NOT EXISTS users (
     user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
     email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -38,4 +41,23 @@ CREATE TABLE IF NOT EXISTS blacklists(
 CREATE INDEX IF NOT EXISTS idx_transactions_timestamp ON transactions(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_is_fraud ON transactions(is_fraud) WHERE is_fraud = 1;
+CREATE TABLE IF NOT EXISTS alerts (
+    alert_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transaction_id UUID REFERENCES transactions(transaction_id) ON DELETE SET NULL,
+    trigger TEXT NOT NULL,
+    severity VARCHAR(20) NOT NULL
+        CHECK (severity IN ('Critical', 'High', 'Medium', 'Low')),
+    score DOUBLE PRECISION NOT NULL
+        CHECK (score >= 0 AND score <= 1),
+    status VARCHAR(40) NOT NULL DEFAULT 'New'
+        CHECK (status IN (
+            'New',
+            'Under Investigation',
+            'Resolved - Fraud',
+            'Resolved - Approved'
+        )),
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE INDEX IF NOT EXISTS idx_blacklists_entity ON blacklists(entity_type, entity_value);
+CREATE INDEX IF NOT EXISTS idx_alerts_created_at ON alerts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_alerts_transaction_id ON alerts(transaction_id);

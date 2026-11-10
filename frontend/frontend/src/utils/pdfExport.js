@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-const BRAND = [37, 99, 235];
+const BRAND = [232, 102, 67];
 const INK = [15, 23, 42];
 const MUTED = [100, 116, 139];
 
@@ -108,6 +108,67 @@ export function exportAlertsPdf({
 
   addFooter(doc);
   doc.save(`FraudGuard_Alerts_Report_${todayStamp()}.pdf`);
+}
+
+export function exportAlertPdf(alert) {
+  if (!alert) return;
+
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  addReportHeader(doc, 'Individual Fraud Alert Report', `Alert · ${todayStamp()}`);
+
+  autoTable(doc, {
+    startY: 34,
+    theme: 'grid',
+    head: [['Incident field', 'Recorded details']],
+    body: [
+      ['Alert ID', alert.id],
+      ['Detected at', alert.timestamp || 'Unknown'],
+      ['Customer', alert.userName || 'Unknown account'],
+      ['User ID', alert.userId || 'Unknown'],
+      ['Transaction ID', alert.transaction_id || alert.transactionId || 'Unknown'],
+      ['Transaction time', alert.transactionTimestamp || 'Unknown'],
+      ['Amount', alert.amount || 'Unknown'],
+      ['Severity / model score', `${alert.severity || 'Unknown'} / ${alert.score ?? 'Unknown'}`],
+      ['Review status', alert.status || 'Unknown'],
+      ['IP address', `${alert.ip || 'Unknown'} · ${alert.location || 'Location unavailable'}`],
+      ['Device fingerprint', alert.device || 'Unknown'],
+      ['Trigger', alert.trigger || 'Unknown'],
+    ],
+    headStyles: { fillColor: BRAND, textColor: 255, fontStyle: 'bold' },
+    styles: { fontSize: 8.5, cellPadding: 2.5, overflow: 'linebreak' },
+    columnStyles: { 0: { cellWidth: 48, fontStyle: 'bold' } },
+  });
+
+  let sectionY = doc.lastAutoTable.finalY + 9;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...INK);
+  doc.text('Reason for flagging', 14, sectionY);
+  sectionY += 6;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  const reasonLines = doc.splitTextToSize(alert.reason || 'No model explanation was provided for this alert.', 182);
+  doc.text(reasonLines, 14, sectionY);
+  sectionY += reasonLines.length * 4.5 + 5;
+
+  if (alert.modelFeatures?.length) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Model inputs at detection', 14, sectionY);
+    autoTable(doc, {
+      startY: sectionY + 4,
+      theme: 'striped',
+      head: [['Input', 'Value']],
+      body: alert.modelFeatures.map((feature) => [feature.label, String(feature.value)]),
+      headStyles: { fillColor: BRAND, textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 8.5, cellPadding: 2.5 },
+      columnStyles: { 0: { cellWidth: 82 } },
+    });
+  }
+
+  addFooter(doc);
+  const fileId = String(alert.id || 'alert').replace(/[^a-z0-9-]/gi, '').slice(-24);
+  doc.save(`FraudGuard_Alert_${fileId || todayStamp()}.pdf`);
 }
 
 export function exportForecastPdf({

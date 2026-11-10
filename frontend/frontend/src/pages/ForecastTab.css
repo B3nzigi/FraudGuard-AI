@@ -119,7 +119,7 @@
     }
  
     .chart-card-header h3 { margin: 0; font-size: 1.1rem; color: var(--text-primary); }
-    .chart-badge { font-size: 0.75rem; color: var(--primary); background: rgba(67, 217, 189, 0.1); padding: 4px 10px; border-radius: 12px; }
+    .chart-badge { font-size: 0.75rem; color: var(--primary); background: var(--primary-soft); padding: 4px 10px; border-radius: 12px; }
  
     .forecast-chart-wrapper {
       width: 100%;
@@ -157,7 +157,8 @@
   .vector-list { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
   .vector-info { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 6px; }
   .vector-bar { width: 100%; height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
-  .vector-fill { height: 100%; border-radius: 4px; }
+  .vector-fill { height: 100%; border-radius: 4px; transition: width 250ms ease; }
   .vector-fill.danger { background: var(--error); }
   .vector-fill.warning { background: var(--warning); }
   .vector-fill.info { background: var(--info); }
+  .vector-empty { color: var(--text-muted); font-size: 0.85rem; margin: 0; }

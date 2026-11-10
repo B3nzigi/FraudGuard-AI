@@ -38,7 +38,7 @@
   
   .signup-input:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(67, 217, 189, 0.15);
+    box-shadow: 0 0 0 3px var(--focus-ring);
   }
   
   .signup-button {
@@ -64,7 +64,7 @@
   .signup-error {
     color: var(--error);
     background-color: var(--error-bg);
-    border: 1px solid rgba(248, 113, 113, 0.3);
+    border: 1px solid var(--error);
     padding: 0.65rem;
     border-radius: var(--radius-sm);
     margin-bottom: 1rem;
@@ -75,7 +75,7 @@
   .signup-success {
     color: var(--success);
     background-color: var(--success-bg);
-    border: 1px solid rgba(52, 211, 153, 0.3);
+    border: 1px solid var(--success-border);
     padding: 0.65rem;
     border-radius: var(--radius-sm);
     margin-bottom: 1rem;

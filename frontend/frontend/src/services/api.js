@@ -44,14 +44,21 @@ export const authService = {
 };
 
 export const transactionService = {
-    getTransactions: async () => {
-        const response = await api.get('/transactions');
+    getTransactions: async (limit = 10) => {
+        const response = await api.get('/transactions', { params: { limit } });
         return response.data;
     },
     createCheckout: async (payload) => {
         const response = await api.post('/checkout', payload);
         return response.data;
     }
+};
+
+export const overviewService = {
+    getOverview: async () => {
+        const response = await api.get('/overview');
+        return response.data;
+    },
 };
 
 export const forecastService = {

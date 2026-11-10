@@ -91,3 +91,9 @@ def predict_fraud(data: TransactionFeatures):
         "is_fraud": is_suspicious,
         "features": features_df.to_dict(orient="records")[0]
     }
+@app.get("/health")
+def health():
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model artifact not found")
+    return {"status": "ok"}
+

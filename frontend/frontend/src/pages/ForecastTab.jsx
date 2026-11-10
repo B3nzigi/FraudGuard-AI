@@ -136,15 +136,15 @@ export default function ForecastTab() {
             <Chart data={activeChartData} margin={{ top: 15, right: 30, left: 10, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorForecast" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#a94df2" stopOpacity={0.6}/>
-                  <stop offset="95%" stopColor="#a94df2" stopOpacity={0.0}/>
+                  <stop offset="5%" stopColor="var(--chart-primary)" stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor="var(--chart-primary)" stopOpacity={0.0}/>
                 </linearGradient>
               </defs>
-              <Grid strokeDasharray="3 3" stroke="#29383b" opacity={0.8} />
-              <X dataKey="day" stroke="#8a9a9c" />
-              <Y stroke="#8a9a9c" unit="k" />
+              <Grid strokeDasharray="3 3" stroke="var(--chart-grid)" />
+              <X dataKey="day" stroke="var(--chart-axis)" />
+              <Y stroke="var(--chart-axis)" unit="k" />
               <Tip
-                contentStyle={{ backgroundColor: '#11191d', borderColor: '#29383b', borderRadius: '8px', color: '#f3f5f5' }}
+                contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-color)', borderRadius: '8px', color: 'var(--text-primary)' }}
                 formatter={(value, name) => [value !== null ? `KES ${(value * 1000).toLocaleString()}` : 'N/A', name]}
               />
 
@@ -153,7 +153,7 @@ export default function ForecastTab() {
                 type="monotone"
                 dataKey="upperBound"
                 stroke="none"
-                fill="#43d9bd"
+                fill="var(--chart-band)"
                 fillOpacity={0.12}
                 name="Upper Bound (KES)"
               />
@@ -161,7 +161,7 @@ export default function ForecastTab() {
                 type="monotone"
                 dataKey="lowerBound"
                 stroke="none"
-                fill="#0b1014"
+                fill="var(--chart-lower-bound)"
                 fillOpacity={0.8}
                 name="Lower Bound (KES)"
               />
@@ -170,7 +170,7 @@ export default function ForecastTab() {
               <AreaLine
                 type="monotone"
                 dataKey="forecast"
-                stroke="#a94df2"
+                stroke="var(--chart-primary)"
                 strokeDasharray="4 4"
                 fill="url(#colorForecast)"
                 strokeWidth={2}
@@ -181,7 +181,7 @@ export default function ForecastTab() {
               <AreaLine 
                 type="monotone"
                 dataKey="actual"
-                stroke="#43d9bd"
+                stroke="var(--chart-secondary)"
                 fill="none"
                 strokeWidth={3}
                 name="Actual Fraud (KES)"
@@ -241,13 +241,22 @@ export default function ForecastTab() {
               <div className="vector-item" key={idx}>
                 <div className="vector-info">
                   <span>{vector.label}</span>
-                  <strong>{vector.percentage}%</strong>
+                    <strong>{Number(vector.count || 0).toLocaleString()} flagged · {vector.percentage}%</strong>
                 </div>
                 <div className="vector-bar">
-                  <div className={`vector-fill ${vector.level}`} style={{ width: `${vector.percentage}%` }}></div>
+                    <div
+                      className={`vector-fill ${vector.level}`}
+                      style={{ width: `${vector.percentage}%` }}
+                      role="progressbar"
+                      aria-label={`${vector.label} share of scored flags`}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={vector.percentage}
+                    ></div>
                 </div>
               </div>
             ))}
+              {attackVectors.length === 0 && <p className="vector-empty">No scored transactions in this timeframe.</p>}
           </div>
         </section>
       </div>

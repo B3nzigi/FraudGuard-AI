@@ -6,6 +6,13 @@ import DashboardPage from './pages/DashboardPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('login'); // 'login', 'signup', or 'dashboard'
+  const [theme, setTheme] = useState(() => localStorage.getItem('fraudguard-theme') || 'light');
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    localStorage.setItem('fraudguard-theme', nextTheme);
+    setTheme(nextTheme);
+  };
 
   const handleSuccess = () => {
     setCurrentPage('dashboard');
@@ -17,10 +24,22 @@ function App() {
   };
 
   return (
-    <div>
+    <div className="app-shell" data-theme={theme}>
+      {currentPage !== 'dashboard' && (
+        <button
+          type="button"
+          className="theme-toggle auth-theme-toggle"
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          aria-pressed={theme === 'dark'}
+        >
+          <span className="theme-toggle-icon" aria-hidden="true">{theme === 'light' ? '☾' : '☀'}</span>
+          <span>{theme === 'light' ? 'Dark mode' : 'Light mode'}</span>
+        </button>
+      )}
       {currentPage === 'dashboard' ? (
         /* 2️⃣ Pass the handleLogout function to DashboardPage */
-        <DashboardPage onLogout={handleLogout} />
+        <DashboardPage onLogout={handleLogout} theme={theme} onToggleTheme={toggleTheme} />
       ) : currentPage === 'login' ? (
         <div>
           <LoginPage onLoginSuccess={handleSuccess} />
